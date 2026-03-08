@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  displayName  String
+  avatarUrl    String?
+  bio          String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  posts              Post[]
+  comments           Comment[]
+  votes              Vote[]
+  questions          Question[]
+  answers            Answer[]
+  sentMessages       Message[]           @relation("sender")
+  conversationMembers ConversationMember[]
+  sentConnections    Connection[]        @relation("sender")
+  receivedConnections Connection[]       @relation("receiver")
+  notifications      Notification[]
+  followers          Follow[]            @relation("following")
+  following          Follow[]            @relation("follower")
+}
+
+model Follow {
+  id         String   @id @default(cuid())
+  followerId String
+  followingId String
+  createdAt  DateTime @default(now())
+
+  follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  content   String
+  imageUrl  String?
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments Comment[]
+  votes    Vote[]
+
+  @@index([authorId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  postId    String?
+  questionId String?
+  parentId  String?
+  createdAt DateTime @default(now())
+
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post     Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  question Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  parent   Comment? @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("replies")
+
+  @@index([postId])
+  @@index([questionId])
+  @@index([authorId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  value     Int
+  userId    String
+  postId    String?
+  questionId String?
+  answerId  String?
+  createdAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post     Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  question Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answer   Answer?  @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@unique([userId, questionId])
+  @@unique([userId, answerId])
+  @@index([postId])
+  @@index([questionId])
+  @@index([answerId])
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  authorId  String
+  tags      String[]
+  solved    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  answers  Answer[]
+  comments Comment[]
+  votes    Vote[]
+
+  @@index([authorId])
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  body       String
+  authorId   String
+  questionId String
+  accepted   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  votes    Vote[]
+
+  @@index([questionId])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  name      String?
+  isGroup   Boolean  @default(false)
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  ConversationMember[]
+  messages Message[]
+}
+
+model ConversationMember {
+  id             String    @id @default(cuid())
+  userId         String
+  conversationId String
+  role           ConversationRole @default(MEMBER)
+  joinedAt       DateTime  @default(now())
+  lastReadAt     DateTime?
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+  @@index([conversationId])
+}
+
+enum ConversationRole {
+  ADMIN
+  MEMBER
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  content        String
+  senderId       String
+  conversationId String
+  type           MessageType @default(TEXT)
+  createdAt      DateTime @default(now())
+
+  sender       User         @relation("sender", fields: [senderId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  FILE
+}
+
+model Connection {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     ConnectionStatus @default(PENDING)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sender   User @relation("sender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum NotificationType {
+  MESSAGE
+  CONNECTION_REQUEST
+  CONNECTION_ACCEPTED
+  POST_LIKE
+  COMMENT
+  ANSWER
+  MENTION
+  NEW_FOLLOWER
+}

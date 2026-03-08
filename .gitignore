@@ -1,0 +1,27 @@
+node_modules/
+.pnpm-store/
+dist/
+.env
+.env.local
+*.tsbuildinfo
+.turbo/
+
+# Expo
+.expo/
+ios/
+android/
+
+# Prisma
+packages/db/src/generated/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+*.log
+.aider*

@@ -1,0 +1,24 @@
+{
+  "name": "social-app",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "dev:api": "pnpm --filter @social-app/api dev",
+    "dev:mobile": "pnpm --filter social-app-mobile dev",
+    "db:generate": "pnpm --filter @social-app/db db:generate",
+    "db:push": "pnpm --filter @social-app/db db:push",
+    "db:migrate": "pnpm --filter @social-app/db db:migrate",
+    "db:studio": "pnpm --filter @social-app/db db:studio",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "social-app-mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "node -e \"const m=parseInt(process.versions.node.split('.')[0],10); if(m>=22){console.error('\\nExpo requires Node 20 (current: '+process.version+'). Run: nvm use 20  or  fnm use 20\\n'); process.exit(1);}\" && expo start",
+    "build:ios": "eas build --platform ios",
+    "build:android": "eas build --platform android",
+    "submit:ios": "eas submit --platform ios",
+    "submit:android": "eas submit --platform android"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^14.0.0",
+    "@social-app/shared": "workspace:*",
+    "@tanstack/react-query": "^5.60.0",
+    "@trpc/client": "^11.0.0",
+    "@trpc/react-query": "^11.0.0",
+    "@trpc/server": "^11.0.0",
+    "expo": "~52.0.0",
+    "expo-image": "~2.0.0",
+    "expo-linking": "~7.0.0",
+    "expo-router": "~4.0.0",
+    "expo-secure-store": "~14.0.0",
+    "expo-splash-screen": "~0.29.0",
+    "expo-status-bar": "~2.0.0",
+    "nativewind": "^4.1.0",
+    "react": "18.3.1",
+    "react-native": "0.76.5",
+    "react-native-reanimated": "~3.16.0",
+    "react-native-safe-area-context": "4.12.0",
+    "react-native-screens": "~4.4.0",
+    "socket.io-client": "^4.8.0",
+    "tailwindcss": "^3.4.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@social-app/api": "workspace:*",
+    "@types/react": "~18.3.0",
+    "typescript": "^5.7.0"
+  }
+}
