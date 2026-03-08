@@ -5,3 +5,8 @@ password = Gbrar18129
 
 # Initialize new repository
 # ...
+
+# Add a new branch
+git branch feature/add-server
+# Switch to the new branch
+git checkout feature/add-server
