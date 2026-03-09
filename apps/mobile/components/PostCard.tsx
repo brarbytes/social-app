@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
+import { Image } from "react-native";
 
 interface PostAuthor {
   id: string;
@@ -51,7 +51,7 @@ export default function PostCard({ post, onPress }: PostCardProps) {
           {post.author?.avatarUrl ? (
             <Image
               source={{ uri: post.author.avatarUrl }}
-              className="w-10 h-10 rounded-full"
+              style={{ width: 40, height: 40, borderRadius: 20 }}
             />
           ) : (
             <View className="w-10 h-10 rounded-full bg-primary-100 items-center justify-center">
@@ -81,8 +81,8 @@ export default function PostCard({ post, onPress }: PostCardProps) {
       {post.imageUrl && (
         <Image
           source={{ uri: post.imageUrl }}
-          className="w-full h-52"
-          contentFit="cover"
+          style={{ width: "100%", height: 208 }}
+          resizeMode="cover"
         />
       )}
 

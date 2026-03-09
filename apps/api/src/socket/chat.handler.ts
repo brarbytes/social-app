@@ -19,7 +19,7 @@ export function chatHandler(io: Server, socket: Socket) {
 
   socket.on(
     "chat:message",
-    async (data: { conversationId: string; content: string }) => {
+    async (data: { conversationId: string; content: string; clientId?: string }) => {
       const member = await prisma.conversationMember.findFirst({
         where: { conversationId: data.conversationId, userId },
       });
@@ -32,7 +32,14 @@ export function chatHandler(io: Server, socket: Socket) {
           content: data.content,
         },
         include: {
-          sender: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          },
         },
       });
 
@@ -41,8 +48,11 @@ export function chatHandler(io: Server, socket: Socket) {
         data: { updatedAt: new Date() },
       });
 
-      io.to(`conversation:${data.conversationId}`).emit("chat:message:new", message);
-    },
+      io.to(`conversation:${data.conversationId}`).emit("chat:message:new", {
+        ...message,
+        clientId: data.clientId,
+      });
+    }
   );
 
   socket.on("chat:typing:start", (conversationId: string) => {

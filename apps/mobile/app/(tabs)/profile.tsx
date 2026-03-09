@@ -1,30 +1,25 @@
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import { trpc } from "@/lib/trpc";
+import { Image } from "react-native";
 import { useAuthStore } from "@/stores/auth";
+import { trpc } from "@/lib/trpc";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const logout = useAuthStore((s) => s.logout);
-  const { data: user, isLoading } = trpc.auth.me.useQuery();
+  const { user, logout } = useAuthStore();
 
-  const handleLogout = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: () => {
-          logout();
-          router.replace("/(auth)/login");
-        },
-      },
-    ]);
-  };
+  const { data: expertise } = trpc.interest.myExpertise.useQuery();
+  const { data: interests } = trpc.interest.myInterests.useQuery();
+  const { data: friends } = trpc.friend.list.useQuery();
 
-  if (isLoading) {
+  if (!user) {
     return (
       <View className="flex-1 bg-white items-center justify-center">
         <ActivityIndicator size="large" color="#6366f1" />
@@ -32,95 +27,132 @@ export default function ProfileScreen() {
     );
   }
 
-  const initials = user?.displayName
-    ?.split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "?";
-
   return (
-    <ScrollView className="flex-1 bg-gray-50">
-      <View className="bg-white pb-6">
-        <View className="h-32 bg-primary" />
-
-        <View className="items-center -mt-16 px-6">
-          {user?.avatarUrl ? (
+    <ScrollView className="flex-1 bg-gray-50" contentContainerStyle={{ paddingBottom: 100 }}>
+      <View className="bg-white px-4 pt-6 pb-5">
+        <View className="flex-row items-center">
+          {user.avatarUrl ? (
             <Image
               source={{ uri: user.avatarUrl }}
-              className="w-32 h-32 rounded-full border-4 border-white"
+              style={{ width: 80, height: 80, borderRadius: 40 }}
             />
           ) : (
-            <View className="w-32 h-32 rounded-full border-4 border-white bg-primary-100 items-center justify-center">
-              <Text className="text-primary text-4xl font-bold">{initials}</Text>
+            <View className="w-20 h-20 rounded-full bg-primary-100 items-center justify-center">
+              <Text className="text-primary font-bold text-3xl">
+                {user.displayName?.charAt(0)?.toUpperCase()}
+              </Text>
             </View>
           )}
 
-          <Text className="text-2xl font-bold text-dark-900 mt-4">
-            {user?.displayName}
-          </Text>
-          <Text className="text-base text-gray-500 mt-1">@{user?.username}</Text>
-          {user?.bio && (
-            <Text className="text-sm text-gray-600 text-center mt-3 px-4 leading-5">
-              {user.bio}
+          <View className="flex-1 ml-4">
+            <Text className="text-xl font-bold text-dark-900">
+              {user.displayName}
             </Text>
-          )}
+            <Text className="text-sm text-gray-500">@{user.username}</Text>
+            {user.bio && (
+              <Text className="text-sm text-gray-700 mt-1">{user.bio}</Text>
+            )}
+          </View>
         </View>
 
-        <View className="flex-row justify-around mt-6 px-8">
-          {[
-            { label: "Posts", value: user?.postCount ?? 0 },
-            { label: "Followers", value: user?.followerCount ?? 0 },
-            { label: "Following", value: user?.followingCount ?? 0 },
-            { label: "Connections", value: user?.connectionCount ?? 0 },
-          ].map((stat) => (
-            <View key={stat.label} className="items-center">
-              <Text className="text-xl font-bold text-dark-900">{stat.value}</Text>
-              <Text className="text-xs text-gray-500 mt-0.5">{stat.label}</Text>
+        <View className="flex-row mt-5 gap-4">
+          <View className="flex-1 bg-primary-50 rounded-xl py-3 items-center">
+            <Text className="text-lg font-bold text-primary">
+              {expertise?.reduce((sum: number, e: any) => sum + e.points, 0) ?? 0}
+            </Text>
+            <Text className="text-xs text-gray-500 mt-0.5">Expert Points</Text>
+          </View>
+          <View className="flex-1 bg-green-50 rounded-xl py-3 items-center">
+            <Text className="text-lg font-bold text-green-600">
+              {expertise?.reduce((sum: number, e: any) => sum + e.correctAnswers, 0) ?? 0}
+            </Text>
+            <Text className="text-xs text-gray-500 mt-0.5">Accepted</Text>
+          </View>
+          <View className="flex-1 bg-blue-50 rounded-xl py-3 items-center">
+            <Text className="text-lg font-bold text-blue-600">
+              {friends?.length ?? 0}
+            </Text>
+            <Text className="text-xs text-gray-500 mt-0.5">Friends</Text>
+          </View>
+        </View>
+      </View>
+
+      {(expertise ?? []).length > 0 && (
+        <View className="bg-white mt-2 px-4 py-4">
+          <Text className="text-base font-bold text-dark-900 mb-3">
+            Expertise
+          </Text>
+          {(expertise ?? []).map((e: any) => (
+            <View key={e.id} className="flex-row items-center py-2 border-b border-gray-50">
+              <View className="w-8 h-8 rounded-lg bg-primary-100 items-center justify-center">
+                <Text className="text-sm">{e.topic.icon || "📚"}</Text>
+              </View>
+              <View className="flex-1 ml-3">
+                <Text className="text-sm font-semibold text-dark-900">
+                  {e.topic.name}
+                  {e.subTopic ? ` › ${e.subTopic.name}` : ""}
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  {e.correctAnswers}/{e.totalAnswers} accepted
+                </Text>
+              </View>
+              <View className="bg-primary-50 px-3 py-1 rounded-full">
+                <Text className="text-sm font-bold text-primary">{e.points} pts</Text>
+              </View>
             </View>
           ))}
         </View>
+      )}
 
-        <View className="px-6 mt-6">
-          <TouchableOpacity className="py-3 rounded-xl border-2 border-primary items-center">
-            <Text className="text-primary font-semibold text-base">Edit Profile</Text>
-          </TouchableOpacity>
+      {(interests ?? []).length > 0 && (
+        <View className="bg-white mt-2 px-4 py-4">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-base font-bold text-dark-900">Interests</Text>
+            <TouchableOpacity onPress={() => router.push("/interests")}>
+              <Text className="text-sm text-primary font-semibold">Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <View className="flex-row flex-wrap gap-2">
+            {(interests ?? []).map((i: any) => (
+              <View key={i.id} className="bg-gray-100 px-3 py-1.5 rounded-full">
+                <Text className="text-sm text-gray-700">
+                  {i.topic.icon || ""} {i.topic.name}
+                  {i.subTopic ? ` › ${i.subTopic.name}` : ""}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
+      )}
+
+      <View className="bg-white mt-2 px-4 py-2">
+        <TouchableOpacity
+          className="flex-row items-center py-3.5 border-b border-gray-50"
+          onPress={() => router.push("/friends")}
+        >
+          <Ionicons name="people-outline" size={22} color="#374151" />
+          <Text className="flex-1 text-base text-dark-900 ml-3">Friends</Text>
+          <Text className="text-sm text-gray-400 mr-2">{friends?.length ?? 0}</Text>
+          <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="flex-row items-center py-3.5 border-b border-gray-50"
+          onPress={() => router.push("/interests")}
+        >
+          <Ionicons name="heart-outline" size={22} color="#374151" />
+          <Text className="flex-1 text-base text-dark-900 ml-3">My Interests</Text>
+          <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="flex-row items-center py-3.5"
+          onPress={logout}
+        >
+          <Ionicons name="log-out-outline" size={22} color="#ef4444" />
+          <Text className="flex-1 text-base text-red-500 ml-3">Sign Out</Text>
+        </TouchableOpacity>
       </View>
-
-      <View className="mt-4 bg-white">
-        <Text className="px-4 py-3 text-sm font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-          Settings
-        </Text>
-
-        {[
-          { icon: "settings-outline" as const, label: "Account Settings" },
-          { icon: "shield-checkmark-outline" as const, label: "Privacy" },
-          { icon: "help-circle-outline" as const, label: "Help & Support" },
-          { icon: "information-circle-outline" as const, label: "About" },
-        ].map((item) => (
-          <TouchableOpacity
-            key={item.label}
-            className="flex-row items-center px-4 py-4 border-b border-gray-50"
-            activeOpacity={0.7}
-          >
-            <Ionicons name={item.icon} size={22} color="#6b7280" />
-            <Text className="flex-1 ml-3 text-base text-dark-900">{item.label}</Text>
-            <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <TouchableOpacity
-        className="mx-4 mt-6 mb-10 py-4 rounded-xl bg-red-50 items-center"
-        onPress={handleLogout}
-        activeOpacity={0.7}
-      >
-        <View className="flex-row items-center">
-          <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-          <Text className="text-red-500 font-semibold text-base ml-2">Sign Out</Text>
-        </View>
-      </TouchableOpacity>
     </ScrollView>
   );
 }

@@ -5,23 +5,18 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: true,
         tabBarActiveTintColor: "#6366f1",
         tabBarInactiveTintColor: "#9ca3af",
         tabBarStyle: {
           backgroundColor: "#ffffff",
-          borderTopColor: "#f1f5f9",
-          borderTopWidth: 1,
-          paddingBottom: 4,
-          height: 56,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
+          borderTopColor: "#f3f4f6",
+          paddingBottom: 6,
+          paddingTop: 6,
+          height: 60,
         },
         headerStyle: { backgroundColor: "#ffffff" },
-        headerTintColor: "#0f172a",
-        headerTitleStyle: { fontWeight: "700", fontSize: 18 },
-        headerShadowVisible: false,
+        headerTitleStyle: { fontWeight: "700", fontSize: 20 },
       }}
     >
       <Tabs.Screen
@@ -29,16 +24,25 @@ export default function TabsLayout() {
         options={{
           title: "Feed",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: "Search",
+          title: "Q&A",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search" size={size} color={color} />
+            <Ionicons name="help-circle-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="groups"
+        options={{
+          title: "Groups",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" size={size} color={color} />
           ),
         }}
       />
@@ -47,16 +51,7 @@ export default function TabsLayout() {
         options={{
           title: "Chat",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: "Notifications",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications" size={size} color={color} />
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
         }}
       />
@@ -65,8 +60,14 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Ionicons name="person-outline" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

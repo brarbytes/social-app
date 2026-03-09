@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
+import { Image } from "react-native";
 import { trpc } from "@/lib/trpc";
 
 interface ConnectionData {
@@ -53,7 +53,7 @@ export default function ConnectionRequestCard({
         {connection.sender.avatarUrl ? (
           <Image
             source={{ uri: connection.sender.avatarUrl }}
-            className="w-14 h-14 rounded-full"
+            style={{ width: 56, height: 56, borderRadius: 28 }}
           />
         ) : (
           <View className="w-14 h-14 rounded-full bg-primary-100 items-center justify-center">

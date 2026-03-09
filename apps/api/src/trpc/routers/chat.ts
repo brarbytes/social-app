@@ -3,6 +3,13 @@ import { TRPCError } from "@trpc/server";
 import { sendMessageSchema, createConversationSchema } from "@social-app/shared";
 import { router, protectedProcedure } from "../index.js";
 
+const userSelect = {
+  id: true,
+  username: true,
+  displayName: true,
+  avatarUrl: true,
+};
+
 export const chatRouter = router({
   conversations: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
@@ -11,37 +18,37 @@ export const chatRouter = router({
       where: { members: { some: { userId } } },
       include: {
         members: {
-          include: {
-            user: { select: { id: true, userdisplayName: true, displayName: true, avatarUrl: true } },
-          },
+          include: { user: { select: userSelect } },
         },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
           include: {
-            sender: { select: { id: true, userdisplayName: true, displayName: true } },
-          },
-        },
-        _count: {
-          select: {
-            messages: {
-              where: {
-                senderId: { not: userId },
-                readAt: null,
-              },
-            },
+            sender: { select: { id: true, username: true, displayName: true } },
           },
         },
       },
       orderBy: { updatedAt: "desc" },
     });
 
-    return conversations.map((conv) => ({
-      ...conv,
-      lastMessage: conv.messages[0] ?? null,
-      unreadCount: conv._count.messages,
-      messages: undefined,
-    }));
+    return conversations.map((conv) => {
+      const myMembership = conv.members.find((m) => m.userId === userId);
+      const lastMessage = conv.messages[0] ?? null;
+
+      let unreadCount = 0;
+      if (myMembership?.lastReadAt && lastMessage) {
+        if (new Date(lastMessage.createdAt) > new Date(myMembership.lastReadAt)) {
+          unreadCount = 1;
+        }
+      }
+
+      return {
+        ...conv,
+        lastMessage,
+        unreadCount,
+        messages: undefined,
+      };
+    });
   }),
 
   messages: protectedProcedure
@@ -50,19 +57,22 @@ export const chatRouter = router({
         conversationId: z.string(),
         cursor: z.string().optional(),
         limit: z.number().int().min(1).max(100).default(50),
-      }),
+      })
     )
     .query(async ({ input, ctx }) => {
       const { conversationId, cursor, limit } = input;
+
+      await ctx.prisma.conversationMember.updateMany({
+        where: { conversationId, userId: ctx.user.id },
+        data: { lastReadAt: new Date() },
+      });
 
       const messages = await ctx.prisma.message.findMany({
         where: { conversationId },
         take: limit + 1,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         orderBy: { createdAt: "desc" },
-        include: {
-          sender: { select: { id: true, userdisplayName: true, displayName: true, avatarUrl: true } },
-        },
+        include: { sender: { select: userSelect } },
       });
 
       let nextCursor: string | undefined;
@@ -78,21 +88,23 @@ export const chatRouter = router({
     .input(createConversationSchema)
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user.id;
-      const memberIds = Array.from(new Set([userId, ...(input.memberIds ?? [])]));
+      const memberIds = Array.from(
+        new Set([userId, ...(input.memberIds ?? [])])
+      );
 
       const conversation = await ctx.prisma.conversation.create({
         data: {
           name: input.name,
+          isGroup: input.isGroup,
           members: {
-            create: memberIds.map((id) => ({ userId: id })),
+            create: memberIds.map((id) => ({
+              userId: id,
+              role: id === userId ? "ADMIN" : "MEMBER",
+            })),
           },
         },
         include: {
-          members: {
-            include: {
-              user: { select: { id: true, userdisplayName: true, displayName: true, avatarUrl: true } },
-            },
-          },
+          members: { include: { user: { select: userSelect } } },
         },
       });
 
@@ -120,10 +132,9 @@ export const chatRouter = router({
             conversationId: input.conversationId,
             senderId: userId,
             content: input.content,
+            type: input.type,
           },
-          include: {
-            sender: { select: { id: true, userdisplayName: true, displayName: true, avatarUrl: true } },
-          },
+          include: { sender: { select: userSelect } },
         }),
         ctx.prisma.conversation.update({
           where: { id: input.conversationId },

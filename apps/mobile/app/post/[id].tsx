@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
+import { Image } from "react-native";
 import { trpc } from "@/lib/trpc";
 
 function formatTime(date: string) {
@@ -79,7 +79,7 @@ export default function PostDetailScreen() {
             {post.author?.avatarUrl ? (
               <Image
                 source={{ uri: post.author.avatarUrl }}
-                className="w-11 h-11 rounded-full"
+                style={{ width: 44, height: 44, borderRadius: 22 }}
               />
             ) : (
               <View className="w-11 h-11 rounded-full bg-primary-100 items-center justify-center">
@@ -105,8 +105,8 @@ export default function PostDetailScreen() {
           {post.imageUrl && (
             <Image
               source={{ uri: post.imageUrl }}
-              className="w-full h-72 rounded-xl mb-4"
-              contentFit="cover"
+              style={{ width: "100%", height: 288, borderRadius: 12, marginBottom: 16 }}
+              resizeMode="cover"
             />
           )}
 

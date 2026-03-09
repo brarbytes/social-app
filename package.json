@@ -8,6 +8,7 @@
     "lint": "turbo lint",
     "dev:api": "pnpm --filter @social-app/api dev",
     "dev:mobile": "pnpm --filter social-app-mobile dev",
+    "dev:mobile:ios": "pnpm --filter social-app-mobile dev:ios",
     "db:generate": "pnpm --filter @social-app/db db:generate",
     "db:push": "pnpm --filter @social-app/db db:push",
     "db:migrate": "pnpm --filter @social-app/db db:migrate",

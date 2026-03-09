@@ -12,6 +12,11 @@ export async function createContext({ req }: CreateFastifyContextOptions) {
       const token = authHeader.slice(7);
       const { userId } = verifyAccessToken(token);
       user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user) {
+        prisma.user
+          .update({ where: { id: userId }, data: { lastActiveAt: new Date() } })
+          .catch(() => {});
+      }
     } catch {
       // invalid token — user stays null
     }

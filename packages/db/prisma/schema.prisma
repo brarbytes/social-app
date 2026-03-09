@@ -7,36 +7,50 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  username     String   @unique
-  displayName  String
-  avatarUrl    String?
-  bio          String?
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+// ─── Users ───────────────────────────────────────────────
 
-  posts              Post[]
-  comments           Comment[]
-  votes              Vote[]
-  questions          Question[]
-  answers            Answer[]
-  sentMessages       Message[]           @relation("sender")
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  username        String   @unique
+  displayName     String
+  avatarUrl       String?
+  bio             String?
+  passwordHash    String
+  helpfulnessScore Int     @default(0)
+  lastActiveAt    DateTime @default(now())
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  posts               Post[]
+  comments            Comment[]
+  votes               Vote[]
+  questions           Question[]
+  answers             Answer[]
+  sentMessages        Message[]            @relation("sender")
   conversationMembers ConversationMember[]
-  sentConnections    Connection[]        @relation("sender")
-  receivedConnections Connection[]       @relation("receiver")
-  notifications      Notification[]
-  followers          Follow[]            @relation("following")
-  following          Follow[]            @relation("follower")
+  sentConnections     Connection[]         @relation("sender")
+  receivedConnections Connection[]         @relation("receiver")
+  notifications       Notification[]
+  followers           Follow[]             @relation("following")
+  following           Follow[]             @relation("follower")
+  sentFriendships     Friendship[]         @relation("friendRequester")
+  receivedFriendships Friendship[]         @relation("friendReceiver")
+  interests           UserInterest[]
+  expertise           UserExpertise[]
+  groupMembers        GroupMember[]
+  questionRoutes      QuestionRoute[]
 }
 
+// ─── Relationships ───────────────────────────────────────
+
 model Follow {
-  id         String   @id @default(cuid())
-  followerId String
+  id          String   @id @default(cuid())
+  followerId  String
   followingId String
-  createdAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
   following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
@@ -46,34 +60,127 @@ model Follow {
   @@index([followingId])
 }
 
+model Friendship {
+  id         String           @id @default(cuid())
+  requesterId String
+  receiverId  String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester User @relation("friendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("friendReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@index([receiverId])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// ─── Topics & Expertise ─────────────────────────────────
+
+model Topic {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  createdAt DateTime @default(now())
+
+  subtopics     SubTopic[]
+  questions     QuestionTopic[]
+  userInterests UserInterest[]
+  userExpertise UserExpertise[]
+}
+
+model SubTopic {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String
+  topicId   String
+  createdAt DateTime @default(now())
+
+  topic         Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  questions     QuestionTopic[]
+  userInterests UserInterest[]
+  userExpertise UserExpertise[]
+
+  @@unique([topicId, slug])
+  @@index([topicId])
+}
+
+model UserInterest {
+  id         String  @id @default(cuid())
+  userId     String
+  topicId    String
+  subTopicId String?
+  manual     Boolean @default(false)
+  score      Float   @default(1.0)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  subTopic SubTopic? @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId, subTopicId])
+  @@index([userId])
+  @@index([topicId])
+}
+
+model UserExpertise {
+  id         String @id @default(cuid())
+  userId     String
+  topicId    String
+  subTopicId String?
+  points     Int    @default(0)
+  correctAnswers Int @default(0)
+  totalAnswers   Int @default(0)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  subTopic SubTopic? @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId, subTopicId])
+  @@index([userId])
+  @@index([topicId])
+  @@index([points(sort: Desc)])
+}
+
+// ─── Posts ────────────────────────────────────────────────
+
 model Post {
   id        String   @id @default(cuid())
   content   String
   imageUrl  String?
   authorId  String
+  groupId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  group    Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   comments Comment[]
   votes    Vote[]
 
   @@index([authorId])
+  @@index([groupId])
 }
 
 model Comment {
-  id        String   @id @default(cuid())
-  content   String
-  authorId  String
-  postId    String?
+  id         String   @id @default(cuid())
+  content    String
+  authorId   String
+  postId     String?
   questionId String?
-  parentId  String?
-  createdAt DateTime @default(now())
+  parentId   String?
+  createdAt  DateTime @default(now())
 
-  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  post     Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post     Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
   question Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  parent   Comment? @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
   replies  Comment[] @relation("replies")
 
   @@index([postId])
@@ -82,18 +189,18 @@ model Comment {
 }
 
 model Vote {
-  id        String   @id @default(cuid())
-  value     Int
-  userId    String
-  postId    String?
+  id         String   @id @default(cuid())
+  value      Int
+  userId     String
+  postId     String?
   questionId String?
-  answerId  String?
-  createdAt DateTime @default(now())
+  answerId   String?
+  createdAt  DateTime @default(now())
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post     Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post     Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
   question Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  answer   Answer?  @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  answer   Answer?   @relation(fields: [answerId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
   @@unique([userId, questionId])
@@ -103,6 +210,8 @@ model Vote {
   @@index([answerId])
 }
 
+// ─── Q&A System ──────────────────────────────────────────
+
 model Question {
   id        String   @id @default(cuid())
   title     String
@@ -110,15 +219,50 @@ model Question {
   authorId  String
   tags      String[]
   solved    Boolean  @default(false)
+  groupId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author   User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  group    Group?          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   answers  Answer[]
   comments Comment[]
   votes    Vote[]
+  topics   QuestionTopic[]
+  routes   QuestionRoute[]
 
   @@index([authorId])
+  @@index([groupId])
+  @@index([solved])
+}
+
+model QuestionTopic {
+  id         String  @id @default(cuid())
+  questionId String
+  topicId    String
+  subTopicId String?
+
+  question Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topic    Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  subTopic SubTopic? @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, topicId, subTopicId])
+  @@index([topicId])
+}
+
+model QuestionRoute {
+  id         String   @id @default(cuid())
+  questionId String
+  userId     String
+  isExpert   Boolean  @default(false)
+  notifiedAt DateTime @default(now())
+  respondedAt DateTime?
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, userId])
+  @@index([userId])
 }
 
 model Answer {
@@ -135,7 +279,71 @@ model Answer {
   votes    Vote[]
 
   @@index([questionId])
+  @@index([authorId])
 }
+
+// ─── Groups ──────────────────────────────────────────────
+
+model Group {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  avatarUrl   String?
+  coverUrl    String?
+  visibility  GroupVisibility @default(PUBLIC)
+  category    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  members   GroupMember[]
+  posts     Post[]
+  questions Question[]
+  connectedToGroups   GroupConnection[] @relation("groupFrom")
+  connectedFromGroups GroupConnection[] @relation("groupTo")
+
+  @@index([category])
+}
+
+enum GroupVisibility {
+  PUBLIC
+  PRIVATE
+  INVITE_ONLY
+}
+
+model GroupMember {
+  id       String      @id @default(cuid())
+  userId   String
+  groupId  String
+  role     GroupRole    @default(CONTRIBUTOR)
+  joinedAt DateTime    @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([groupId])
+}
+
+enum GroupRole {
+  ADMIN
+  MODERATOR
+  CONTRIBUTOR
+}
+
+model GroupConnection {
+  id          String   @id @default(cuid())
+  fromGroupId String
+  toGroupId   String
+  createdAt   DateTime @default(now())
+
+  fromGroup Group @relation("groupFrom", fields: [fromGroupId], references: [id], onDelete: Cascade)
+  toGroup   Group @relation("groupTo", fields: [toGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([fromGroupId, toGroupId])
+}
+
+// ─── Messaging ───────────────────────────────────────────
 
 model Conversation {
   id        String   @id @default(cuid())
@@ -150,11 +358,11 @@ model Conversation {
 }
 
 model ConversationMember {
-  id             String    @id @default(cuid())
+  id             String           @id @default(cuid())
   userId         String
   conversationId String
   role           ConversationRole @default(MEMBER)
-  joinedAt       DateTime  @default(now())
+  joinedAt       DateTime         @default(now())
   lastReadAt     DateTime?
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -170,12 +378,12 @@ enum ConversationRole {
 }
 
 model Message {
-  id             String   @id @default(cuid())
+  id             String      @id @default(cuid())
   content        String
   senderId       String
   conversationId String
   type           MessageType @default(TEXT)
-  createdAt      DateTime @default(now())
+  createdAt      DateTime    @default(now())
 
   sender       User         @relation("sender", fields: [senderId], references: [id], onDelete: Cascade)
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -190,13 +398,15 @@ enum MessageType {
   FILE
 }
 
+// ─── Connections (legacy) ────────────────────────────────
+
 model Connection {
-  id         String   @id @default(cuid())
+  id         String           @id @default(cuid())
   senderId   String
   receiverId String
   status     ConnectionStatus @default(PENDING)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   sender   User @relation("sender", fields: [senderId], references: [id], onDelete: Cascade)
   receiver User @relation("receiver", fields: [receiverId], references: [id], onDelete: Cascade)
@@ -210,28 +420,38 @@ enum ConnectionStatus {
   REJECTED
 }
 
+// ─── Notifications ───────────────────────────────────────
+
 model Notification {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   userId    String
   type      NotificationType
   title     String
   body      String
   data      Json?
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, read])
 }
 
 enum NotificationType {
   MESSAGE
   CONNECTION_REQUEST
   CONNECTION_ACCEPTED
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
   POST_LIKE
   COMMENT
   ANSWER
+  QUESTION_ROUTED
+  ANSWER_ACCEPTED
+  EXPERTISE_GAINED
+  GROUP_INVITE
+  GROUP_POST
   MENTION
   NEW_FOLLOWER
 }

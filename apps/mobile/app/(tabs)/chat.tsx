@@ -1,7 +1,7 @@
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
+import { Image } from "react-native";
 import { trpc } from "@/lib/trpc";
 
 function formatTime(date: string) {
@@ -44,7 +44,7 @@ export default function ChatListScreen() {
             {item.avatarUrl ? (
               <Image
                 source={{ uri: item.avatarUrl }}
-                className="w-14 h-14 rounded-full"
+                style={{ width: 56, height: 56, borderRadius: 28 }}
               />
             ) : (
               <View className="w-14 h-14 rounded-full bg-primary-100 items-center justify-center">
